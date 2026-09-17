@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Recruitment Agent</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f4f5f7;
+    color: #1a1a1a;
+    min-height: 100vh;
+  }
+  header {
+    background: #1a1a1a;
+    color: #fff;
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
+  header h1 span { color: #7c8cff; }
+  #status { font-size: 12px; opacity: 0.75; }
+  .tabs {
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0 32px;
+    display: flex;
+    gap: 4px;
+  }
+  .tabs button {
+    background: none;
+    border: none;
+    padding: 14px 18px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #6b7280;
+    font-family: inherit;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .tabs button:hover { color: #1a1a1a; }
+  .tabs button.active { color: #1a1a1a; border-bottom-color: #1a1a1a; font-weight: 600; }
+  main { max-width: 1080px; margin: 0 auto; padding: 28px 32px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 26px;
+    margin-bottom: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 18px; color: #111827; }
+  label {
+    display: block;
+    font-size: 12px;
+    color: #4b5563;
+    margin-bottom: 6px;
+    margin-top: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  label:first-child { margin-top: 0; }
+  input, textarea, select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: #1a1a1a;
+    box-shadow: 0 0 0 3px rgba(26,26,26,0.06);
+  }
+  textarea { min-height: 90px; resize: vertical; }
+  button.primary {
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 7px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 18px;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  button.primary:hover:not(:disabled) { background: #333; }
+  button.primary:disabled { background: #9ca3af; cursor: not-allowed; }
+  button.secondary {
+    background: #fff;
+    color: #1a1a1a;
+    border: 1px solid #d1d5db;
+    padding: 10px 18px;
+    border-radius: 7px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 18px;
+    margin-left: 8px;
+    font-family: inherit;
+  }
+  button.secondary:hover { background: #f9fafb; }
+  .result {
+    margin-top: 20px;
+    padding: 14px 16px;
+    background: #f0f9ff;
+    border-left: 3px solid #0284c7;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #0c4a6e;
+    display: none;
+  }
+  .result:not(:empty) { display: block; }
+  .result.error { background: #fef2f2; border-left-color: #dc2626; color: #991b1b; }
+  .result.success { background: #f0fdf4; border-left-color: #16a34a; color: #166534; }
+  .candidate {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #fff;
+  }
+  .candidate:hover { background: #f9fafb; border-color: #d1d5db; }
+  .candidate .meta { font-size: 12px; color: #6b7280; margin-top: 3px; }
+  .candidate strong { font-size: 14px; }
+  .score {
+    background: #1a1a1a;
+    color: #fff;
+    padding: 4px 11px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .score.high { background: #16a34a; }
+  .score.mid  { background: #d97706; }
+  .score.low  { background: #6b7280; }
+  .chat-box {
+    max-height: 340px;
+    overflow-y: auto;
+    padding: 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    min-height: 100px;
+  }
+  .chat-box:empty::before {
+    content: "Ask any question about this candidate's experience...";
+    color: #9ca3af;
+    font-size: 13px;
+    font-style: italic;
+  }
+  .msg { margin-bottom: 10px; padding: 10px 14px; border-radius: 10px; font-size: 13.5px; line-height: 1.5; max-width: 85%; }
+  .msg.user { background: #1a1a1a; color: #fff; margin-left: auto; border-bottom-right-radius: 3px; }
+  .msg.bot { background: #fff; border: 1px solid #e5e7eb; border-bottom-left-radius: 3px; }
+  .spinner {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-state { color: #9ca3af; font-size: 13px; padding: 20px 0; text-align: center; }
+  pre.info {
+    background: #f9fafb;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    overflow: auto;
+    max-height: 260px;
+    border: 1px solid #e5e7eb;
+    line-height: 1.5;
+  }
+  .row { display: flex; gap: 12px; }
+  .row > * { flex: 1; }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1a1a1a;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.25s;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: #dc2626; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>AI Recruitment <span>Agent</span></h1>
+  <span id="status">● checking...</span>
+</header>
+
+<div class="tabs">
+  <button class="active" data-tab="jobs">Jobs</button>
+  <button data-tab="upload">Upload CV</button>
+  <button data-tab="match">Match Candidates</button>
+  <button data-tab="candidates">All Candidates</button>
+</div>
+
+<main>
+
+  <div id="panel-jobs" class="panel active">
+    <div class="card">
+      <h2>Post a new job</h2>
+      <label>Job title</label>
+      <input id="job-title" placeholder="Senior Python Developer">
+      <label>Description</label>
+      <textarea id="job-desc" placeholder="Describe the role, responsibilities, and requirements..."></textarea>
+      <div class="row">
+        <div>
+          <label>Required skills (comma-separated)</label>
+          <input id="job-skills" placeholder="Python, FastAPI, PostgreSQL">
+        </div>
+        <div>
+          <label>Experience level</label>
+          <input id="job-exp" placeholder="5+ years">
+        </div>
+      </div>
+      <button class="primary" id="btn-create-job" onclick="createJob()">Create Job</button>
+      <div id="job-result" class="result"></div>
+    </div>
+    <div class="card">
+      <h2>Existing jobs</h2>
+      <button class="secondary" onclick="loadJobs()">Refresh</button>
+      <div id="jobs-list" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <div id="panel-upload" class="panel">
+    <div class="card">
+      <h2>Upload a CV</h2>
+      <label>Candidate name</label>
+      <input id="cv-name" placeholder="John Doe">
+      <label>Email</label>
+      <input id="cv-email" type="email" placeholder="john@example.com">
+      <label>CV file (PDF only)</label>
+      <input id="cv-file" type="file" accept="application/pdf">
+      <button class="primary" id="btn-upload" onclick="uploadCV()">Upload &amp; Parse</button>
+      <div id="cv-result" class="result"></div>
+    </div>
+  </div>
+
+  <div id="panel-match" class="panel">
+    <div class="card">
+      <h2>Find best candidates for a job</h2>
+      <label>Select job</label>
+      <select id="match-job"><option value="">-- loading --</option></select>
+      <button class="primary" onclick="matchCandidates()">Match Candidates</button>
+      <button class="secondary" onclick="loadJobs()">Refresh Jobs</button>
+      <div id="match-result" class="result"></div>
+    </div>
+  </div>
+
+  <div id="panel-candidates" class="panel">
+    <div class="card">
+      <h2>All candidates</h2>
+      <button class="secondary" onclick="loadCandidates()">Refresh</button>
+      <div id="candidates-list" style="margin-top:16px;"></div>
+    </div>
+    <div class="card" id="candidate-detail" style="display:none;">
+      <h2 id="cd-name">Candidate</h2>
+      <div id="cd-info"></div>
+      <label style="margin-top:20px;">Ask a question about this candidate's CV</label>
+      <div class="chat-box" id="chat-box"></div>
+      <div class="row">
+        <input id="chat-input" placeholder="e.g. Does this person know FastAPI?" onkeydown="if(event.key==='Enter')askQuestion()">
+        <button class="primary" style="flex:0 0 auto; margin-top:0;" onclick="askQuestion()">Ask</button>
+      </div>
+      <label style="margin-top:20px;">Interview questions for a specific job</label>
+      <select id="question-job"><option value="">-- load jobs first --</option></select>
+      <button class="primary" onclick="getQuestions()">Generate 5 Questions</button>
+      <div id="questions-result" class="result"></div>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const API = "";
+
+function toast(msg, isError) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isError ? " error" : "");
+  setTimeout(() => t.className = "toast", 2800);
+}
+
+function show(id, html, kind) {
+  const el = document.getElementById(id);
+  el.className = "result" + (kind ? " " + kind : "");
+  el.innerHTML = html;
+}
+
+document.querySelectorAll(".tabs button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+    if (btn.dataset.tab === "jobs") loadJobs();
+    if (btn.dataset.tab === "match") loadJobs();
+    if (btn.dataset.tab === "candidates") loadCandidates();
+  });
+});
+
+async function createJob() {
+  const title = document.getElementById("job-title").value.trim();
+  const description = document.getElementById("job-desc").value.trim();
+  const skills = document.getElementById("job-skills").value.trim();
+  const experience = document.getElementById("job-exp").value.trim();
+  if (!title || !description) return toast("Title and description required", true);
+
+  const btn = document.getElementById("btn-create-job");
+  btn.disabled = true;
+  show("job-result", '<span class="spinner"></span> Creating job and generating embeddings...');
+
+  const fd = new FormData();
+  fd.append("title", title);
+  fd.append("description", description);
+  fd.append("skills", skills);
+  fd.append("experience", experience);
+
+  try {
+    const r = await fetch("/api/jobs/create", { method: "POST", body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || "Failed");
+    show("job-result", "✅ Job created\n\nJob ID: " + data.job_id, "success");
+    toast("Job created");
+    ["job-title", "job-desc", "job-skills", "job-exp"].forEach(id => document.getElementById(id).value = "");
+    loadJobs();
+  } catch (e) {
+    show("job-result", "❌ " + e.message, "error");
+    toast(e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadJobs() {
+  try {
+    const r = await fetch("/api/jobs/list");
+    const data = await r.json();
+    const jobs = data.jobs || [];
+    const list = document.getElementById("jobs-list");
+    const sel = document.getElementById("match-job");
+    const qsel = document.getElementById("question-job");
+    sel.innerHTML = '<option value="">-- pick a job --</option>';
+    qsel.innerHTML = '<option value="">-- pick a job --</option>';
+    if (!jobs.length) {
+      list.innerHTML = '<div class="empty-state">No jobs yet. Create your first one above.</div>';
+      return;
+    }
+    list.innerHTML = "";
+    jobs.forEach(j => {
+      const d = document.createElement("div");
+      d.className = "candidate";
+      d.innerHTML = `
+        <div>
+          <strong>${escapeHtml(j.title)}</strong>
+          <div class="meta">${escapeHtml(j.experience_level || "")} · ${(j.required_skills || []).join(", ")}</div>
+        </div>
+        <div style="font-size:11px;color:#9ca3af;">${j.id.slice(0, 8)}</div>`;
+      list.appendChild(d);
+      [sel, qsel].forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = j.id;
+        opt.textContent = j.title;
+        s.appendChild(opt);
+      });
+    });
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function uploadCV() {
+  const name = document.getElementById("cv-name").value.trim();
+  const email = document.getElementById("cv-email").value.trim();
+  const file = document.getElementById("cv-file").files[0];
+  if (!name || !email || !file) return toast("Name, email and file required", true);
+
+  const btn = document.getElementById("btn-upload");
+  btn.disabled = true;
+  show("cv-result", '<span class="spinner"></span> Parsing CV with llama3.2 (30–60 sec)...');
+
+  const fd = new FormData();
+  fd.append("name", name);
+  fd.append("email", email);
+  fd.append("file", file);
+
+  try {
+    const r = await fetch("/api/candidates/upload", { method: "POST", body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || "Failed");
+    show("cv-result",
+      "✅ Candidate added\n\nCandidate ID: " + data.data.candidate_id +
+      "\n\nParsed data:\n" + JSON.stringify(data.data.structured_data, null, 2),
+      "success");
+    toast("CV uploaded and parsed");
+    document.getElementById("cv-name").value = "";
+    document.getElementById("cv-email").value = "";
+    document.getElementById("cv-file").value = "";
+  } catch (e) {
+    show("cv-result", "❌ " + e.message, "error");
+    toast(e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function matchCandidates() {
+  const jobId = document.getElementById("match-job").value;
+  if (!jobId) return toast("Pick a job first", true);
+  show("match-result", '<span class="spinner"></span> Ranking candidates by semantic similarity...');
+  try {
+    const r = await fetch("/api/jobs/" + jobId + "/match?top_k=10");
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || "Failed");
+    if (!data.candidates.length) return show("match-result", "No candidates matched yet. Upload CVs first.");
+    let html = "<strong>Top matches:</strong><br><br>";
+    data.candidates.forEach((c, i) => {
+      const s = c.match_score;
+      const cls = s >= 75 ? "high" : s >= 40 ? "mid" : "low";
+      html += `<div class="candidate" style="cursor:default;">
+        <div>
+          <strong>${i + 1}. ${escapeHtml(c.candidate.name)}</strong>
+          <div class="meta">${escapeHtml(c.candidate.email)}</div>
+        </div>
+        <span class="score ${cls}">${s}%</span>
+      </div>`;
+    });
+    show("match-result", html, "success");
+  } catch (e) {
+    show("match-result", "❌ " + e.message, "error");
+  }
+}
+
+async function loadCandidates() {
+  try {
+    const r = await fetch("/api/candidates/list");
+    const data = await r.json();
+    const list = document.getElementById("candidates-list");
+    if (!data.candidates || !data.candidates.length) {
+      list.innerHTML = '<div class="empty-state">No candidates yet. Upload a CV first.</div>';
+      return;
+    }
+    list.innerHTML = "";
+    data.candidates.forEach(c => {
+      const d = document.createElement("div");
+      d.className = "candidate";
+      d.innerHTML = `
+        <div>
+          <strong>${escapeHtml(c.name)}</strong>
+          <div class="meta">${escapeHtml(c.email)}</div>
+        </div>
+        <div style="font-size:11px;color:#9ca3af;">${c.id.slice(0, 8)}</div>`;
+      d.onclick = () => openCandidate(c);
+      list.appendChild(d);
+    });
+  } catch (e) { console.error(e); }
+}
+
+let activeCandidate = null;
+function openCandidate(c) {
+  activeCandidate = c;
+  document.getElementById("candidate-detail").style.display = "block";
+  document.getElementById("cd-name").textContent = c.name;
+  const skills = (c.parsed_data && c.parsed_data.skills) ? c.parsed_data.skills.join(", ") : "—";
+  document.getElementById("cd-info").innerHTML = `
+    <div class="meta" style="margin-bottom:12px;">${escapeHtml(c.email)}</div>
+    <strong style="font-size:13px;">Skills:</strong> ${escapeHtml(skills)}<br><br>
+    <strong style="font-size:13px;">Full parsed data:</strong>
+    <pre class="info">${escapeHtml(JSON.stringify(c.parsed_data, null, 2))}</pre>`;
+  document.getElementById("chat-box").innerHTML = "";
+  document.getElementById("questions-result").innerHTML = "";
+  document.getElementById("questions-result").className = "result";
+  document.getElementById("chat-box").scrollTop = 0;
+}
+
+async function askQuestion() {
+  if (!activeCandidate) return;
+  const input = document.getElementById("chat-input");
+  const q = input.value.trim();
+  if (!q) return;
+  const box = document.getElementById("chat-box");
+  box.innerHTML += `<div class="msg user">${escapeHtml(q)}</div>`;
+  input.value = "";
+  const thinking = document.createElement("div");
+  thinking.className = "msg bot";
+  thinking.innerHTML = '<span class="spinner"></span> reading CV...';
+  box.appendChild(thinking);
+  box.scrollTop = box.scrollHeight;
+
+  const fd = new FormData();
+  fd.append("question", q);
+  try {
+    const r = await fetch("/api/candidates/" + activeCandidate.id + "/ask", { method: "POST", body: fd });
+    const data = await r.json();
+    thinking.innerHTML = escapeHtml(data.answer || data.error || "No answer");
+  } catch (e) {
+    thinking.textContent = "Error: " + e.message;
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+async function getQuestions() {
+  if (!activeCandidate) return;
+  const jobId = document.getElementById("question-job").value;
+  if (!jobId) return toast("Pick a job for interview questions", true);
+  show("questions-result", '<span class="spinner"></span> Generating interview questions...');
+  try {
+    const r = await fetch("/api/candidates/" + activeCandidate.id + "/questions?job_id=" + jobId);
+    const data = await r.json();
+    show("questions-result", data.questions || data.error || "No questions", "success");
+  } catch (e) {
+    show("questions-result", "❌ " + e.message, "error");
+  }
+}
+
+function escapeHtml(s) {
+  if (s == null) return "";
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+fetch("/health")
+  .then(r => r.json())
+  .then(() => {
+    const s = document.getElementById("status");
+    s.textContent = "● online";
+    s.style.color = "#4ade80";
+    loadJobs();
+  })
+  .catch(() => {
+    const s = document.getElementById("status");
+    s.textContent = "● offline";
+    s.style.color = "#ff5555";
+  });
+</script>
+</body>
+</html>

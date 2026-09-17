@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment variables (SECRETS — never commit)
+.env
+.env.local
+*.env
+
+# Data files (CVs contain personal info)
+data/resumes/*.pdf
+data/resumes/*.docx
+!data/resumes/.gitkeep
+
+# Logs
+*.log
+api.log
+nohup.out
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Test artifacts
+test_*.py
+!_template_test.py
