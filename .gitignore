@@ -34,3 +34,5 @@ Thumbs.db
 # Test artifacts
 test_*.py
 !_template_test.py
+.vercel
+.env*
